@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SYNTHWAVE TRON</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+    <canvas id="minimap"></canvas>
+
+    <div id="hud">
+        <div><span class="label">SPEED:</span> <span id="hud-speed" class="value">0</span></div>
+        <div><span class="label">BIKE HP:</span> <span id="hud-hp" class="value">100</span></div>
+        <div><span class="label">SCORE:</span> <span id="hud-score" class="value">0</span></div>
+        <div><span class="label">MODE:</span> <span id="hud-mode" class="value">RIDING</span></div>
+        <div id="hud-dismount" class="hidden-hint"><span class="warning">⚠ PRESS E TO DISMOUNT</span></div>
+        <div id="hud-mount" class="hidden-hint"><span class="warning">⚠ PRESS E NEAR BIKE TO MOUNT</span></div>
+    </div>
+
+    <span id="boost-label">BOOST</span>
+    <div id="boost-bar-container"><div id="boost-bar-fill"></div></div>
+
+    <div id="message-overlay">
+        <h1 id="msg-title">SYNTHWAVE TRON</h1>
+        <h2 id="msg-subtitle">ENTER THE GRID</h2>
+        <p id="msg-text">Press ENTER to start</p>
+        <p class="subtitle" id="msg-controls"></p>
+    </div>
+
+    <div id="pause-overlay">
+        <h1>PAUSED</h1>
+        <p>Press ESC to resume</p>
+    </div>
+
+    <div id="controls-help">
+        WASD/Arrows: Steer | E: Dismount/Mount | SPACE: Boost | ESC: Pause
+    </div>
+
+    <script type="module" src="game.js"></script>
+</body>
+</html>
