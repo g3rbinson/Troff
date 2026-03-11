@@ -105,6 +105,26 @@ export class SynthwaveAudio {
         }
     }
 
+    // --- Volume controls ---
+
+    setMasterVolume(value) {
+        // value: 0..100
+        if (!this.masterGain) return;
+        this.masterGain.gain.value = value / 100;
+    }
+
+    setMusicVolume(value) {
+        // value: 0..100
+        if (!this.musicGain) return;
+        this.musicGain.gain.value = value / 100;
+    }
+
+    setSFXVolume(value) {
+        // value: 0..100
+        if (!this.sfxGain) return;
+        this.sfxGain.gain.value = value / 100;
+    }
+
     _scheduleLoop() {
         this.schedulerTimer = setInterval(() => {
             if (!this.playing) return;

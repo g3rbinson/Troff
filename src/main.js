@@ -282,8 +282,8 @@ function spawnFreeBike() {
 // VICTORY CHECK
 // ============================================================
 function checkVictory() {
-    // AI is alive if on foot OR riding a living bike
-    const aliveEnemies = state.aiDrivers.filter(a => a.alive || a.onFoot).length;
+    // An AI counts as alive while alive=true (covers both on-foot and bike-riding states)
+    const aliveEnemies = state.aiDrivers.filter(a => a.alive).length;
     if (aliveEnemies === 0 && state.frame > 60) {
         state.mode = 'victory';
         victoryFrame = 0;
@@ -321,6 +321,26 @@ document.getElementById('btn-resume').addEventListener('click', () => {
 document.getElementById('btn-quit').addEventListener('click', () => {
     if (state.mode === 'paused') quitToMenu();
 });
+
+// --- Volume slider handlers ---
+function initVolumeControls() {
+    const sliders = [
+        { id: 'vol-master', valId: 'vol-master-val', fn: v => { if (state.audio) state.audio.setMasterVolume(v); } },
+        { id: 'vol-music',  valId: 'vol-music-val',  fn: v => { if (state.audio) state.audio.setMusicVolume(v); } },
+        { id: 'vol-sfx',    valId: 'vol-sfx-val',    fn: v => { if (state.audio) state.audio.setSFXVolume(v); } },
+    ];
+    for (const s of sliders) {
+        const el = document.getElementById(s.id);
+        const valEl = document.getElementById(s.valId);
+        if (!el) continue;
+        el.addEventListener('input', () => {
+            const v = parseInt(el.value, 10);
+            if (valEl) valEl.textContent = v;
+            s.fn(v);
+        });
+    }
+}
+initVolumeControls();
 
 // ============================================================
 // OVERLAY / HUD HELPERS
@@ -686,7 +706,7 @@ function drawPenthousePrompt() {
 // ENEMY COUNT HUD (during fight)
 // ============================================================
 function drawEnemyCount() {
-    const alive = state.aiDrivers.filter(a => a.alive || a.onFoot).length;
+    const alive = state.aiDrivers.filter(a => a.alive).length;
     const total = state.aiDrivers.length;
 
     ctx.fillStyle = '#ff4444';

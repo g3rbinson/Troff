@@ -66,8 +66,8 @@ export default {
         { type: 'spikes', x: 600, y: 2450, w: 150, h: 100, damage: 25, interval: 80 },
         { type: 'spikes', x: 4250, y: 2450, w: 150, h: 100, damage: 25, interval: 80 },
         // Turrets that fire discs periodically
-        { type: 'turret', x: 1800, y: 2500, interval: 180, damage: 30, direction: 'right' },
-        { type: 'turret', x: 3200, y: 2500, interval: 180, damage: 30, direction: 'left' },
+        { type: 'turret', x: 1800, y: 2500, interval: 180, damage: 30, direction: 'east' },
+        { type: 'turret', x: 3200, y: 2500, interval: 180, damage: 30, direction: 'west' },
     ],
 
     ramps: [

@@ -75,15 +75,15 @@ export default {
         { type: 'emp', x: 600, y: 600, w: 400, h: 400 },
         { type: 'emp', x: 4000, y: 4000, w: 400, h: 400 },
         // Turrets everywhere
-        { type: 'turret', x: 1000, y: 2500, interval: 150, damage: 35, direction: 'right' },
-        { type: 'turret', x: 4000, y: 2500, interval: 150, damage: 35, direction: 'left' },
-        { type: 'turret', x: 2500, y: 1000, interval: 150, damage: 35, direction: 'down' },
-        { type: 'turret', x: 2500, y: 4000, interval: 150, damage: 35, direction: 'up' },
+        { type: 'turret', x: 1000, y: 2500, interval: 150, damage: 35, direction: 'east' },
+        { type: 'turret', x: 4000, y: 2500, interval: 150, damage: 35, direction: 'west' },
+        { type: 'turret', x: 2500, y: 1000, interval: 150, damage: 35, direction: 'south' },
+        { type: 'turret', x: 2500, y: 4000, interval: 150, damage: 35, direction: 'north' },
         // Corner turrets
-        { type: 'turret', x: 800, y: 800, interval: 200, damage: 30, direction: 'right' },
-        { type: 'turret', x: 4200, y: 800, interval: 200, damage: 30, direction: 'left' },
-        { type: 'turret', x: 800, y: 4200, interval: 200, damage: 30, direction: 'right' },
-        { type: 'turret', x: 4200, y: 4200, interval: 200, damage: 30, direction: 'left' },
+        { type: 'turret', x: 800, y: 800, interval: 200, damage: 30, direction: 'east' },
+        { type: 'turret', x: 4200, y: 800, interval: 200, damage: 30, direction: 'west' },
+        { type: 'turret', x: 800, y: 4200, interval: 200, damage: 30, direction: 'east' },
+        { type: 'turret', x: 4200, y: 4200, interval: 200, damage: 30, direction: 'west' },
     ],
 
     ramps: [
