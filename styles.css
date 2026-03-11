@@ -146,7 +146,7 @@ canvas { display: block; }
 /* Boost bar */
 #boost-bar-container {
     position: fixed;
-    bottom: 60px; left: 20px;
+    bottom: 80px; left: 20px;
     width: 150px; height: 10px;
     border: 1px solid #00ffff;
     box-shadow: 0 0 8px rgba(0,255,255,0.3);
@@ -164,10 +164,39 @@ canvas { display: block; }
 
 #boost-label {
     position: fixed;
-    bottom: 72px; left: 20px;
+    bottom: 92px; left: 20px;
     color: #00ffff;
     font-size: 10px;
     text-shadow: 0 0 5px #00ffff;
+    z-index: 20;
+    pointer-events: none;
+}
+
+/* Disc cooldown bar */
+#disc-bar-container {
+    position: fixed;
+    bottom: 52px; left: 20px;
+    width: 150px; height: 10px;
+    border: 1px solid #ff00ff;
+    box-shadow: 0 0 8px rgba(255,0,255,0.3);
+    z-index: 20;
+    pointer-events: none;
+}
+
+#disc-bar-fill {
+    height: 100%;
+    width: 100%;
+    background: linear-gradient(90deg, #ff00ff, #ff8800);
+    box-shadow: 0 0 8px #ff00ff;
+    transition: width 0.1s linear;
+}
+
+#disc-label {
+    position: fixed;
+    bottom: 64px; left: 20px;
+    color: #ff00ff;
+    font-size: 10px;
+    text-shadow: 0 0 5px #ff00ff;
     z-index: 20;
     pointer-events: none;
 }
