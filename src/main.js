@@ -24,6 +24,7 @@ import { fights, getFight } from './story/Campaign.js';
 import { drawPenthouse, resetPenthouse } from './story/Penthouse.js';
 import { Dialogue } from './story/Dialogue.js';
 import { Elevator } from './story/Elevator.js';
+import { getActiveZone } from './story/PenthouseZones.js';
 
 // Obstacle system
 import { loadLevelObstacles, updateTraps } from './systems/Obstacles.js';
@@ -41,7 +42,6 @@ const dialogue = new Dialogue();
 const elevator = new Elevator();
 let penthouseFrame = 0;
 let victoryFrame = 0;
-let readyToDescend = false; // player pressed enter in penthouse idle
 
 // --- Canvas ---
 resize();
@@ -52,36 +52,97 @@ window.addEventListener('resize', () => { resize(); resetPenthouse(); });
 // ============================================================
 window.addEventListener('keydown', e => {
     keys[e.key.toLowerCase()] = true;
+    const k = e.key;
 
-    if (e.key === 'Enter') {
+    if (k === 'Enter') {
         if (state.mode === 'menu') {
             enterPenthouse('intro');
         } else if (state.mode === 'dead') {
-            // Restart fight — go back to penthouse
             enterPenthouse('dialogue_before');
         } else if (state.mode === 'penthouse') {
-            handlePenthouseInput();
+            handlePenthouseEnter();
         } else if (state.mode === 'victory') {
-            // Skip to elevator up
             goUpTopenthouse();
         }
     }
-    if (e.key === 'Escape' && (state.mode === 'playing' || state.mode === 'paused')) togglePause();
+
+    // E key — interact with penthouse zone
+    if ((k === 'e' || k === 'E') && state.mode === 'penthouse') {
+        handlePenthouseInteract();
+    }
+
+    // ESC — close UI overlay, close elevator picker, or toggle pause
+    if (k === 'Escape') {
+        if (state.mode === 'penthouse' && state.penthouseUI) {
+            state.penthouseUI = null;
+        } else if (state.mode === 'penthouse' && state.elevatorPicker) {
+            state.elevatorPicker = false;
+        } else if (state.mode === 'penthouse' || state.mode === 'playing' || state.mode === 'paused') {
+            togglePause();
+        }
+    }
+
+    // Elevator picker navigation (W/S or arrows)
+    if (state.mode === 'penthouse' && state.elevatorPicker) {
+        if (k === 'w' || k === 'W' || k === 'ArrowUp') {
+            state.elevatorSelection = 0;
+        } else if (k === 's' || k === 'S' || k === 'ArrowDown') {
+            state.elevatorSelection = 1;
+        }
+    }
 });
 
 window.addEventListener('click', () => {
-    if (state.mode === 'penthouse') {
-        handlePenthouseInput();
+    if (state.mode === 'penthouse' && dialogue.active) {
+        dialogue.advance();
     } else if (state.mode === 'victory') {
         goUpTopenthouse();
     }
 });
 
-function handlePenthouseInput() {
+function handlePenthouseEnter() {
     if (dialogue.active) {
         dialogue.advance();
-    } else if (state.penthousePhase === 'idle') {
-        readyToDescend = true;
+    } else if (state.elevatorPicker) {
+        confirmElevatorChoice();
+    }
+}
+
+function handlePenthouseInteract() {
+    if (dialogue.active || state.penthouseUI || state.elevatorPicker) return;
+    if (state.penthousePhase !== 'idle') return;
+
+    const zone = state.penthouseInteraction;
+    if (!zone) return;
+
+    if (zone.id === 'couch') {
+        const fight = getFight(state.fightIndex);
+        if (fight) {
+            dialogue.start(fight.managerBefore, 'MANAGER', () => {});
+        }
+    } else if (zone.id === 'elevator') {
+        if (state.campaignComplete) {
+            overlay('block');
+            setOverlayText('GRID MASTER', 'You conquered the grid.', 'Press ENTER to play again', '');
+            state.mode = 'menu';
+            state.fightIndex = 0;
+            state.campaignComplete = false;
+            hideGameHUD(true);
+        } else {
+            state.elevatorPicker = true;
+            state.elevatorSelection = 0;
+        }
+    } else {
+        state.penthouseUI = zone.id;
+    }
+}
+
+function confirmElevatorChoice() {
+    state.elevatorPicker = false;
+    if (state.elevatorSelection === 0) {
+        goDownToArena();
+    } else {
+        state.penthouseUI = 'garage';
     }
 }
 
@@ -93,13 +154,18 @@ function enterPenthouse(phase) {
     state.mode = 'penthouse';
     state.penthousePhase = phase || 'intro';
     penthouseFrame = 0;
-    readyToDescend = false;
+    state.penthouseUI = null;
+    state.elevatorPicker = false;
+    state.penthouseInteraction = null;
     overlay('none');
     pauseOverlay(false);
     hideGameHUD(true);
 
+    // Player starts near the couch/manager area
+    state.penthousePlayerX = 0.45;
+    state.penthousePlayerDir = 1;
+
     if (phase === 'intro') {
-        // First time — small intro then manager dialogue
         dialogue.start(
             getFight(state.fightIndex).managerBefore,
             'MANAGER',
@@ -114,15 +180,13 @@ function enterPenthouse(phase) {
             });
         }
     } else if (phase === 'dialogue_after') {
-        const fight = getFight(state.fightIndex - 1); // just finished fight
+        const fight = getFight(state.fightIndex - 1);
         if (fight) {
             dialogue.start(fight.managerAfter, 'MANAGER', () => {
-                // If campaign complete
                 if (state.fightIndex >= fights.length) {
                     state.campaignComplete = true;
                     state.penthousePhase = 'idle';
                 } else {
-                    // Show next fight intro
                     const nextFight = getFight(state.fightIndex);
                     if (nextFight) {
                         setTimeout(() => {
@@ -294,12 +358,14 @@ function checkVictory() {
 // PAUSE
 // ============================================================
 function togglePause() {
-    if (state.mode === 'playing') {
+    if (state.mode === 'playing' || state.mode === 'penthouse') {
+        state._prePauseMode = state.mode;
         state.mode = 'paused';
         audio.pause();
         pauseOverlay(true);
     } else if (state.mode === 'paused') {
-        state.mode = 'playing';
+        state.mode = state._prePauseMode || 'playing';
+        state._prePauseMode = null;
         audio.resume();
         pauseOverlay(false);
     }
@@ -437,34 +503,31 @@ function loop() {
     if (state.mode === 'penthouse') {
         penthouseFrame++;
         dialogue.update();
-        const speaking = dialogue.isSpeaking;
-        const managerVisible = state.penthousePhase !== 'idle' || dialogue.active || true; // always show manager
-        drawPenthouse(penthouseFrame, managerVisible, speaking);
 
-        // Dialogue box
-        if (dialogue.active || state.penthousePhase === 'dialogue_before' || state.penthousePhase === 'dialogue_after') {
+        // Player movement (A/D or Left/Right)
+        if (state.penthousePhase === 'idle' && !dialogue.active && !state.penthouseUI && !state.elevatorPicker) {
+            const WALK_SPEED = 0.004;
+            if (keys['a'] || keys['arrowleft']) {
+                state.penthousePlayerX = Math.max(0.03, state.penthousePlayerX - WALK_SPEED);
+                state.penthousePlayerDir = -1;
+            }
+            if (keys['d'] || keys['arrowright']) {
+                state.penthousePlayerX = Math.min(0.97, state.penthousePlayerX + WALK_SPEED);
+                state.penthousePlayerDir = 1;
+            }
+            state.penthouseInteraction = getActiveZone(state.penthousePlayerX);
+        }
+
+        const speaking = dialogue.isSpeaking;
+        drawPenthouse(penthouseFrame, true, speaking);
+
+        if (dialogue.active) {
             dialogue.draw();
         }
 
-        // Idle prompt — "Press ENTER to go to arena"
-        if (state.penthousePhase === 'idle' && !dialogue.active) {
-            drawPenthousePrompt();
-        }
-
-        // If player chose to descend
-        if (readyToDescend && !dialogue.active) {
-            readyToDescend = false;
-            if (state.campaignComplete) {
-                // Back to menu or free roam
-                overlay('block');
-                setOverlayText('GRID MASTER', 'You conquered the grid.', 'Press ENTER to play again', '');
-                state.mode = 'menu';
-                state.fightIndex = 0;
-                state.campaignComplete = false;
-                hideGameHUD(true);
-            } else {
-                goDownToArena();
-            }
+        // Elevator destination picker
+        if (state.elevatorPicker) {
+            drawElevatorPicker(penthouseFrame);
         }
 
         drawScanlines();
@@ -665,40 +728,82 @@ function drawVictoryScreen() {
 }
 
 // ============================================================
-// PENTHOUSE IDLE PROMPT
+// ELEVATOR DESTINATION PICKER
 // ============================================================
-function drawPenthousePrompt() {
+function drawElevatorPicker(t) {
     const cx = canvas.width / 2;
-    const fight = getFight(state.fightIndex);
-    const blink = Math.sin(penthouseFrame * 0.06) > 0;
+    const cy = canvas.height / 2;
+    const pw = 350, ph = 220;
 
-    // Fight info
-    ctx.fillStyle = 'rgba(0,255,255,0.7)';
-    ctx.font = '18px "Courier New", monospace';
+    // Dim background
+    ctx.fillStyle = 'rgba(0,0,0,0.7)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Panel
+    ctx.fillStyle = 'rgba(10,0,25,0.95)';
+    ctx.fillRect(cx - pw / 2, cy - ph / 2, pw, ph);
+    ctx.strokeStyle = 'rgba(0,255,255,0.5)';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(cx - pw / 2, cy - ph / 2, pw, ph);
+
+    // Title
     ctx.textAlign = 'center';
+    ctx.fillStyle = '#00ffff';
+    ctx.font = 'bold 20px "Courier New", monospace';
     ctx.shadowColor = '#00ffff';
     ctx.shadowBlur = 10;
-
-    if (state.campaignComplete) {
-        ctx.fillText('YOU ARE THE GRID MASTER', cx, canvas.height * 0.4);
-        if (blink) {
-            ctx.fillStyle = 'rgba(255,0,255,0.7)';
-            ctx.font = '14px "Courier New", monospace';
-            ctx.fillText('[ ENTER TO PLAY AGAIN ]', cx, canvas.height * 0.4 + 30);
-        }
-    } else if (fight) {
-        ctx.fillText(`NEXT FIGHT: ${fight.name}`, cx, canvas.height * 0.4);
-        ctx.fillStyle = 'rgba(255,0,255,0.5)';
-        ctx.font = '14px "Courier New", monospace';
-        ctx.fillText(`${fight.enemies} OPPONENTS`, cx, canvas.height * 0.4 + 25);
-
-        if (blink) {
-            ctx.fillStyle = 'rgba(255,0,255,0.8)';
-            ctx.font = '16px "Courier New", monospace';
-            ctx.fillText('[ ENTER / CLICK TO DESCEND TO ARENA ]', cx, canvas.height * 0.4 + 60);
-        }
-    }
+    ctx.fillText('SELECT DESTINATION', cx, cy - 65);
     ctx.shadowBlur = 0;
+
+    // Decorative line
+    ctx.strokeStyle = 'rgba(0,255,255,0.3)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(cx - 120, cy - 50);
+    ctx.lineTo(cx + 120, cy - 50);
+    ctx.stroke();
+
+    // Options
+    const options = [
+        { label: '▼  ARENA', sub: 'Floor 1 — Fight next opponent' },
+        { label: '▼  GARAGE', sub: 'Basement — Coming soon' },
+    ];
+
+    for (let i = 0; i < options.length; i++) {
+        const oy = cy - 20 + i * 65;
+        const selected = state.elevatorSelection === i;
+
+        // Selection highlight
+        if (selected) {
+            const pulse = 0.08 + 0.04 * Math.sin(t * 0.08);
+            ctx.fillStyle = `rgba(0,255,255,${pulse})`;
+            ctx.fillRect(cx - 140, oy - 16, 280, 48);
+            ctx.strokeStyle = `rgba(0,255,255,${0.4 + 0.2 * Math.sin(t * 0.06)})`;
+            ctx.lineWidth = 1;
+            ctx.strokeRect(cx - 140, oy - 16, 280, 48);
+        }
+
+        // Option label
+        ctx.fillStyle = selected ? '#00ffff' : 'rgba(0,255,255,0.35)';
+        ctx.font = 'bold 18px "Courier New", monospace';
+        if (selected) { ctx.shadowColor = '#00ffff'; ctx.shadowBlur = 8; }
+        ctx.fillText(options[i].label, cx, oy + 5);
+        ctx.shadowBlur = 0;
+
+        // Sub-label
+        ctx.fillStyle = selected ? 'rgba(255,0,255,0.6)' : 'rgba(255,0,255,0.18)';
+        ctx.font = '11px "Courier New", monospace';
+        ctx.fillText(options[i].sub, cx, oy + 22);
+    }
+
+    // Controls hint
+    const blink = Math.sin(t * 0.06) > 0;
+    if (blink) {
+        ctx.fillStyle = 'rgba(0,255,255,0.5)';
+        ctx.font = '11px "Courier New", monospace';
+        ctx.fillText('W/S or ↑/↓ to select  •  ENTER to confirm  •  ESC to cancel', cx, cy + ph / 2 - 20);
+    }
+
     ctx.textAlign = 'left';
 }
 
