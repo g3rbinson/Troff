@@ -2,6 +2,7 @@ import { ARENA, FOOT_SPEED, MAX_HP, PLAYER_CLR } from '../constants.js';
 import { clamp, dist } from '../utils.js';
 import { keys, mouse, consumeClick } from '../input.js';
 import { state } from '../state.js';
+import { resolveObstacleCollisions, checkRamp } from '../systems/Obstacles.js';
 
 export class Player {
     constructor(x, y) {
@@ -12,6 +13,7 @@ export class Player {
         this.bike = null;
         this.alive = true;
         this.invuln = 0;
+        this.floor = 1;
         this._ePrev = false;
         this._fPrev = false;
     }
@@ -30,6 +32,7 @@ export class Player {
             this.x = this.bike.x;
             this.y = this.bike.y;
             this.angle = this.bike.angle;
+            this.floor = this.bike.floor || 1;
 
             // Fire disc
             let fireDisc = false;
@@ -67,6 +70,10 @@ export class Player {
             this.x = clamp(this.x, 5, ARENA - 5);
             this.y = clamp(this.y, 5, ARENA - 5);
 
+            // Obstacle + ramp handling on foot
+            resolveObstacleCollisions(this);
+            checkRamp(this);
+
             if (keys['e'] && !this._ePrev) this.tryMount();
         }
         this._ePrev = !!keys['e'];
@@ -103,6 +110,7 @@ export class Player {
             this.onBike = true;
             this.x = best.x;
             this.y = best.y;
+            best.floor = this.floor || 1;
         }
     }
 

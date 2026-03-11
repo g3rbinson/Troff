@@ -15,6 +15,7 @@ export class Projectile {
         this.alive = true;
         this.radius = 5;
         this.justBounced = false;
+        this.floor = owner ? (owner.floor || 1) : 1;
     }
 
     update() {

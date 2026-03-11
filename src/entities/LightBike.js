@@ -23,6 +23,7 @@ export class LightBike {
         this.deathY = 0;
         this.deathTimer = 0;
         this.discCooldown = 0;
+        this.floor = 1;
     }
 
     update() {
