@@ -110,6 +110,39 @@ canvas { display: block; }
     text-shadow: 0 0 10px #ff88ff;
 }
 
+#pause-buttons {
+    margin-top: 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    align-items: center;
+}
+
+.pause-btn {
+    background: transparent;
+    border: 2px solid #00ffff;
+    color: #00ffff;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 20px;
+    padding: 14px 48px;
+    letter-spacing: 4px;
+    cursor: pointer;
+    text-shadow: 0 0 10px #00ffff;
+    box-shadow: 0 0 15px rgba(0, 255, 255, 0.3), inset 0 0 15px rgba(0, 255, 255, 0.1);
+    transition: all 0.2s;
+    min-width: 260px;
+}
+
+.pause-btn:hover {
+    background: rgba(0, 255, 255, 0.15);
+    box-shadow: 0 0 30px rgba(0, 255, 255, 0.5), inset 0 0 20px rgba(0, 255, 255, 0.2);
+    transform: scale(1.05);
+}
+
+.pause-btn:active {
+    transform: scale(0.97);
+}
+
 /* Boost bar */
 #boost-bar-container {
     position: fixed;

@@ -24,7 +24,7 @@ const GRID_SP = 50;
 const BIKE_SPEED = 4;
 const BOOST_SPEED = 7;
 const FOOT_SPEED = 2.2;
-const TRAIL_LIFE = 600;
+const TRAIL_LIFE = 300;
 const MAX_HP = 100;
 const HIT_DMG = 35;
 const NUM_AI = 4;
@@ -41,8 +41,7 @@ const keys = {};
 window.addEventListener('keydown', e => {
     keys[e.key.toLowerCase()] = true;
     if (e.key === 'Enter' && (state === 'menu' || state === 'dead')) startGame();
-    if (e.key === 'Escape' && state === 'playing') togglePause();
-    if (e.key === 'Escape' && state === 'paused') togglePause();
+    if (e.key === 'Escape' && (state === 'playing' || state === 'paused')) togglePause();
 });
 window.addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
 
@@ -167,6 +166,7 @@ class LightBike {
             this.deathX = this.x;
             this.deathY = this.y;
             this.deathTimer = 0;
+            this.trail = []; // clear trails on death
         }
     }
 
@@ -333,6 +333,7 @@ class Player {
         if (!this.onBike || !this.bike) return;
         audio.playDismount();
         this.onBike = false;
+        this.bike.trail = []; // clear trails on dismount
         this.bike.ridden = false;
         this.x = this.bike.x - Math.sin(this.bike.angle) * 25;
         this.y = this.bike.y + Math.cos(this.bike.angle) * 25;
@@ -618,6 +619,23 @@ function togglePause() {
         pauseOverlay(false);
     }
 }
+
+function quitToMenu() {
+    state = 'menu';
+    audio.pause();
+    pauseOverlay(false);
+    overlay('block');
+    setOverlayText('SYNTHWAVE TRON', 'ENTER THE GRID', 'Press ENTER to start',
+        'WASD/Arrows: Steer | E: Dismount/Mount | SPACE: Boost | ESC: Pause');
+}
+
+// Button handlers
+document.getElementById('btn-resume').addEventListener('click', () => {
+    if (state === 'paused') togglePause();
+});
+document.getElementById('btn-quit').addEventListener('click', () => {
+    if (state === 'paused') quitToMenu();
+});
 
 // ============================================================
 // COLLISION DETECTION
