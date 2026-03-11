@@ -527,8 +527,8 @@ export function drawPenthouse(t, managerVisible, managerSpeaking) {
         drawInteractionPrompt(t, state.penthousePlayerX, state.penthouseInteraction);
     }
 
-    // Placeholder UI overlay
-    if (state.penthouseUI) {
+    // Placeholder UI overlay (skip stations with custom UIs)
+    if (state.penthouseUI && state.penthouseUI !== 'stereo') {
         drawPlaceholderUI(t, state.penthouseUI);
     }
 }

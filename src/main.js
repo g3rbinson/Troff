@@ -25,6 +25,7 @@ import { drawPenthouse, resetPenthouse } from './story/Penthouse.js';
 import { Dialogue } from './story/Dialogue.js';
 import { Elevator } from './story/Elevator.js';
 import { getActiveZone } from './story/PenthouseZones.js';
+import { drawStereoUI, handleStereoInput, resetStereoUI } from './ui/StereoUI.js';
 
 // Obstacle system
 import { loadLevelObstacles, updateTraps } from './systems/Obstacles.js';
@@ -82,6 +83,12 @@ window.addEventListener('keydown', e => {
         }
     }
 
+    // Stereo UI input routing (captures W/S/A/D when stereo is open)
+    if (state.mode === 'penthouse' && state.penthouseUI === 'stereo') {
+        handleStereoInput(k);
+        return; // don't let keys bleed to other handlers
+    }
+
     // Elevator picker navigation (W/S or arrows)
     if (state.mode === 'penthouse' && state.elevatorPicker) {
         if (k === 'w' || k === 'W' || k === 'ArrowUp') {
@@ -134,6 +141,7 @@ function handlePenthouseInteract() {
         }
     } else {
         state.penthouseUI = zone.id;
+        if (zone.id === 'stereo') resetStereoUI();
     }
 }
 
@@ -520,6 +528,11 @@ function loop() {
 
         const speaking = dialogue.isSpeaking;
         drawPenthouse(penthouseFrame, true, speaking);
+
+        // Stereo synth controls overlay
+        if (state.penthouseUI === 'stereo') {
+            drawStereoUI(penthouseFrame);
+        }
 
         if (dialogue.active) {
             dialogue.draw();

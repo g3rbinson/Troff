@@ -22,6 +22,15 @@ export class SynthwaveAudio {
         // Lookahead config
         this.scheduleAhead = 0.15;
         this.timerInterval = 50;
+
+        // Tweakable synth parameters
+        this.reverbAmount = 0.25;   // 0–1
+        this.delayAmount = 0.25;    // 0–1 (feedback)
+        this.bassWave = 'sawtooth'; // sine | square | sawtooth | triangle
+        this.padWave = 'sawtooth';
+        this.arpWave = 'square';
+        this.bassFilterCutoff = 500;   // Hz (100–2000)
+        this.padFilterCutoff = 1000;   // Hz (200–4000)
     }
 
     init() {
@@ -123,6 +132,26 @@ export class SynthwaveAudio {
         // value: 0..100
         if (!this.sfxGain) return;
         this.sfxGain.gain.value = value / 100;
+    }
+
+    setBPM(bpm) {
+        this.bpm = Math.max(60, Math.min(200, bpm));
+        this.beatLen = 60 / this.bpm;
+        if (this.delay) {
+            this.delay.delayTime.value = this.beatLen * 0.75;
+        }
+    }
+
+    setReverbAmount(value) {
+        // value: 0–100
+        this.reverbAmount = value / 100;
+        if (this.reverbSend) this.reverbSend.gain.value = this.reverbAmount;
+    }
+
+    setDelayAmount(value) {
+        // value: 0–100
+        this.delayAmount = value / 100;
+        if (this.delayFeedback) this.delayFeedback.gain.value = this.delayAmount;
     }
 
     _scheduleLoop() {
@@ -227,9 +256,9 @@ export class SynthwaveAudio {
         const g = this.ctx.createGain();
         const filt = this.ctx.createBiquadFilter();
         filt.type = 'lowpass'; filt.Q.value = 6;
-        filt.frequency.setValueAtTime(500, time);
+        filt.frequency.setValueAtTime(this.bassFilterCutoff, time);
         filt.frequency.exponentialRampToValueAtTime(120, time + this.beatLen * 0.8);
-        osc.type = 'sawtooth'; osc.frequency.value = freq;
+        osc.type = this.bassWave; osc.frequency.value = freq;
         g.gain.setValueAtTime(0.18, time);
         g.gain.exponentialRampToValueAtTime(0.01, time + this.beatLen * 0.9);
         osc.connect(filt); filt.connect(g); g.connect(this.musicGain);
@@ -242,8 +271,8 @@ export class SynthwaveAudio {
                 const osc = this.ctx.createOscillator();
                 const g = this.ctx.createGain();
                 const filt = this.ctx.createBiquadFilter();
-                filt.type = 'lowpass'; filt.frequency.value = 1000;
-                osc.type = 'sawtooth'; osc.frequency.value = freq;
+                filt.type = 'lowpass'; filt.frequency.value = this.padFilterCutoff;
+                osc.type = this.padWave; osc.frequency.value = freq;
                 osc.detune.value = detune;
                 g.gain.setValueAtTime(0, time);
                 g.gain.linearRampToValueAtTime(0.025, time + 0.4);
@@ -259,7 +288,7 @@ export class SynthwaveAudio {
     _arp(time, freq) {
         const osc = this.ctx.createOscillator();
         const g = this.ctx.createGain();
-        osc.type = 'square'; osc.frequency.value = freq;
+        osc.type = this.arpWave; osc.frequency.value = freq;
         const dur = this.beatLen / 2;
         g.gain.setValueAtTime(0.05, time);
         g.gain.exponentialRampToValueAtTime(0.001, time + dur * 0.7);
