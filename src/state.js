@@ -21,4 +21,11 @@ export const state = {
     fightIndex: 0,           // current fight in campaign
     campaignComplete: false,
     penthousePhase: 'intro', // 'intro' | 'idle' | 'dialogue_before' | 'dialogue_after'
+
+    // Obstacles & environment (loaded per-level)
+    obstacles: [],      // { type, x, y, radius/w/h ... }
+    traps: [],          // { type, x, y, w, h, damage, interval, _timer ... }
+    ramps: [],          // { x, y, w, h, fromFloor, toFloor, direction }
+    turretProjectiles: [], // discs fired by turrets
+    levelFloors: 1,     // number of floors this level has
 };

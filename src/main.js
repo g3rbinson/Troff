@@ -25,6 +25,10 @@ import { drawPenthouse, resetPenthouse } from './story/Penthouse.js';
 import { Dialogue } from './story/Dialogue.js';
 import { Elevator } from './story/Elevator.js';
 
+// Obstacle system
+import { loadLevelObstacles, updateTraps } from './systems/Obstacles.js';
+import { drawObstacles } from './rendering/Obstacles.js';
+
 // --- Audio ---
 const audio = new SynthwaveAudio();
 state.audio = audio;
@@ -187,6 +191,9 @@ function startFight() {
     generateStars();
     hideGameHUD(false);
 
+    // Load level obstacles, traps, ramps
+    loadLevelObstacles(fight);
+
     // Shuffle spawn points for variety
     const spawns = [...SPAWN_POINTS];
     for (let i = spawns.length - 1; i > 0; i--) {
@@ -200,6 +207,7 @@ function startFight() {
     state.player.onBike = false;
     state.player.bike = null;
     state.player.invuln = 90; // brief spawn protection
+    state.player.floor = 1;
 
     // Drop a player-colored bike near the player
     const playerBike = new LightBike(
@@ -208,6 +216,7 @@ function startFight() {
         Math.random() * Math.PI * 2, C.PLAYER_CLR, C.PLAYER_TRAIL
     );
     playerBike.ridden = false;
+    playerBike.floor = 1;
     state.allBikes.push(playerBike);
 
     // Enemy AI — each at a different spawn, ON FOOT
@@ -223,13 +232,16 @@ function startFight() {
             Math.random() * Math.PI * 2, C.AI_CLR[idx], C.AI_TRAIL[idx]
         );
         aiBike.ridden = false;
+        aiBike.floor = 1;
         state.allBikes.push(aiBike);
 
         // AI driver starts on foot at spawn
-        state.aiDrivers.push(new AIDriver(null, idx, sp.x, sp.y));
+        const ai = new AIDriver(null, idx, sp.x, sp.y);
+        ai.floor = 1;
+        state.aiDrivers.push(ai);
     }
 
-    // Scatter extra free bikes around the arena
+    // Scatter extra free bikes around the arena (avoid obstacles)
     const numFree = fight.freeBikes || 4;
     for (let i = 0; i < numFree; i++) spawnFreeBike();
 
@@ -241,10 +253,28 @@ function startFight() {
 }
 
 function spawnFreeBike() {
+    // Try to spawn in a clear spot (not inside obstacles)
+    for (let attempt = 0; attempt < 20; attempt++) {
+        const x = 200 + Math.random() * (C.ARENA - 400);
+        const y = 200 + Math.random() * (C.ARENA - 400);
+        let blocked = false;
+        for (const obs of state.obstacles) {
+            if (obs.type === 'wall' && x >= obs.x && x <= obs.x + obs.w && y >= obs.y && y <= obs.y + obs.h) { blocked = true; break; }
+            if (obs.type === 'pillar' && Math.hypot(x - obs.x, y - obs.y) < obs.radius + 20) { blocked = true; break; }
+        }
+        if (blocked) continue;
+        const b = new LightBike(x, y, Math.random() * Math.PI * 2, '#aaaaff', '#8888cc');
+        b.hp = 50 + Math.random() * 50 | 0;
+        b.floor = 1;
+        state.allBikes.push(b);
+        return;
+    }
+    // Fallback: spawn anyway
     const x = 200 + Math.random() * (C.ARENA - 400);
     const y = 200 + Math.random() * (C.ARENA - 400);
     const b = new LightBike(x, y, Math.random() * Math.PI * 2, '#aaaaff', '#8888cc');
     b.hp = 50 + Math.random() * 50 | 0;
+    b.floor = 1;
     state.allBikes.push(b);
 }
 
@@ -252,7 +282,8 @@ function spawnFreeBike() {
 // VICTORY CHECK
 // ============================================================
 function checkVictory() {
-    const aliveEnemies = state.aiDrivers.filter(a => a.alive).length;
+    // AI is alive if on foot OR riding a living bike
+    const aliveEnemies = state.aiDrivers.filter(a => a.alive || a.onFoot).length;
     if (aliveEnemies === 0 && state.frame > 60) {
         state.mode = 'victory';
         victoryFrame = 0;
@@ -478,6 +509,9 @@ function loop() {
         if (!p.alive) state.projectiles.splice(i, 1);
     }
 
+    // Update traps (spikes, turrets)
+    updateTraps();
+
     // NO AI RESPAWN — enemies don't come back in campaign mode
     // (free bikes also limited — only initial set)
 
@@ -512,11 +546,17 @@ function loop() {
     drawGrid(camX, camY);
     drawArena(camX, camY);
 
+    // Level obstacles (walls, pillars, traps, ramps)
+    drawObstacles(camX, camY);
+
     // All bikes & trails
     for (const b of state.allBikes) b.draw(ctx, camX, camY);
 
     // Projectiles
     for (const p of state.projectiles) p.draw(ctx, camX, camY);
+
+    // AI on foot
+    for (const ai of state.aiDrivers) ai.drawOnFoot(ctx, camX, camY);
 
     // Player (on foot)
     player.draw(ctx, camX, camY);
@@ -646,7 +686,7 @@ function drawPenthousePrompt() {
 // ENEMY COUNT HUD (during fight)
 // ============================================================
 function drawEnemyCount() {
-    const alive = state.aiDrivers.filter(a => a.alive).length;
+    const alive = state.aiDrivers.filter(a => a.alive || a.onFoot).length;
     const total = state.aiDrivers.length;
 
     ctx.fillStyle = '#ff4444';

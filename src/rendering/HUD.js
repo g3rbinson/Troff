@@ -1,6 +1,7 @@
 import { ARENA, FOOT_SPEED, PLAYER_CLR, DISC_COOLDOWN } from '../constants.js';
 import { state } from '../state.js';
 import { minimapCanvas, minimapCtx } from '../canvas.js';
+import { drawObstaclesMinimap } from './Obstacles.js';
 
 export function updateHUD() {
     const { player } = state;
@@ -38,6 +39,23 @@ export function updateHUD() {
         if (discFill) discFill.style.width = '0%';
     }
     sc.textContent = state.score;
+
+    // Floor indicator (only if level has multiple floors)
+    let floorEl = document.getElementById('hud-floor');
+    if (state.levelFloors > 1) {
+        if (!floorEl) {
+            floorEl = document.createElement('div');
+            floorEl.id = 'hud-floor';
+            floorEl.style.cssText = 'color:#00ff88;font-size:14px;font-family:"Courier New",monospace;text-shadow:0 0 8px #00ff88;';
+            const hud = document.getElementById('hud');
+            if (hud) hud.appendChild(floorEl);
+        }
+        const pFloor = (player.floor || 1);
+        floorEl.textContent = `FLOOR ${pFloor} / ${state.levelFloors}`;
+        floorEl.style.display = '';
+    } else if (floorEl) {
+        floorEl.style.display = 'none';
+    }
 }
 
 export function drawMinimap() {
@@ -56,6 +74,9 @@ export function drawMinimap() {
     }
 
     const s = w / ARENA;
+
+    // Obstacles on minimap
+    drawObstaclesMinimap(m, s);
 
     // Trails
     m.globalAlpha = 0.4;
@@ -105,4 +126,16 @@ export function drawMinimap() {
         m.fill();
     }
     m.globalAlpha = 1;
+
+    // AI on foot
+    const { aiDrivers } = state;
+    if (aiDrivers) {
+        for (const ai of aiDrivers) {
+            if (!ai.onFoot || !ai.alive) continue;
+            m.fillStyle = '#ff4444';
+            m.globalAlpha = 0.5 + 0.5 * Math.sin(state.frame * 0.1);
+            m.fillRect(ai.footX * s - 1, ai.footY * s - 1, 3, 3);
+        }
+        m.globalAlpha = 1;
+    }
 }
